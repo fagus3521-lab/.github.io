@@ -137,7 +137,7 @@
     }
     .cover img{
       width:100%; height:210px; object-fit:cover;
-      filter:brightness(.88); transform:scale(1.02);
+      filter:brightness(.90); transform:scale(1.02);
     }
     .cover::after{
       content:""; position:absolute; inset:0;
@@ -167,7 +167,6 @@
     .verifyRow{margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
     .warn{margin-top:10px;font-size:12px;color:rgba(255,255,255,.55);}
 
-    /* NEW: clearer lock hint */
     .lockHint{
       margin-top:12px;
       display:inline-flex;
@@ -198,32 +197,77 @@
     }
     .collectionHead h3{font-size:22px}
     .collectionHead span{font-size:12px;color:var(--muted2)}
+
+    /* ✅ CHANGE: vertical layout */
     .grid{
-      display:grid;
-      grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-      gap:12px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
     }
+
     .imgBox{
-      border-radius:16px; overflow:hidden;
+      border-radius:16px;
+      overflow:hidden;
       border:1px solid rgba(255,255,255,.10);
       background:rgba(255,255,255,.04);
       position:relative;
-    }
-    .imgBox img{
-      width:100%; height:230px; object-fit:cover;
-      filter:brightness(.86);
-      transition: transform .18s ease, filter .18s ease;
-    }
-    .imgBox:hover img{transform:scale(1.05);filter:brightness(.95)}
-    .overlay{
-      position:absolute; inset:auto 0 0 0;
-      padding:10px 10px;
-      background:linear-gradient(180deg, transparent, rgba(0,0,0,.78));
-      color:rgba(255,255,255,.88);
-      font-size:12px;
-      display:flex; justify-content:space-between; align-items:center;
+      width:100%;
     }
 
+    /* ✅ Image sizing: vertical scroll-friendly */
+    .imgBox img{
+      width:100%;
+      height:auto;
+      display:block;
+      object-fit:cover;
+      filter:brightness(.98);
+      transform:scale(1.02);
+    }
+
+    /* ✅ Curtain effect (tirai) */
+    .imgBox::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(180deg, rgba(0,0,0,.92), rgba(0,0,0,.35), rgba(0,0,0,.85));
+      transform:translateY(0%);
+      transition: transform 1.05s cubic-bezier(.22,.85,.24,1);
+      transition-delay: var(--d, 0ms);
+      z-index:3;
+    }
+    /* subtle shine line */
+    .imgBox::after{
+      content:"";
+      position:absolute;
+      left:0; right:0; top:-30%;
+      height:40%;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+      transform:translateY(0%);
+      transition: transform 1.05s cubic-bezier(.22,.85,.24,1);
+      transition-delay: var(--d, 0ms);
+      z-index:4;
+      opacity:.65;
+    }
+
+    /* Overlay label */
+    .overlay{
+      position:absolute; left:10px; right:10px; bottom:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(0,0,0,.55);
+      border:1px solid rgba(255,255,255,.10);
+      color:rgba(255,255,255,.90);
+      font-size:13px;
+      display:flex; justify-content:space-between; align-items:center;
+      z-index:5;
+      backdrop-filter: blur(6px);
+    }
+
+    /* ✅ When revealed */
+    .imgBox.reveal::before{ transform:translateY(110%); }
+    .imgBox.reveal::after{ transform:translateY(260%); }
+
+    /* CTA block */
     .ctaBlock{
       margin-top:14px;
       padding:22px 18px;
@@ -239,6 +283,7 @@
     .ctaBlock p{color:var(--muted);line-height:1.75}
     .ctaRow{margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 
+    /* Sticky */
     .sticky{
       position:fixed;left:0;right:0;bottom:0;
       z-index:999;
@@ -261,6 +306,7 @@
       background:linear-gradient(90deg, var(--pink), var(--pink2));
     }
 
+    /* Exit modal */
     #exitModal{
       position:fixed; inset:0; z-index:1000;
       background:rgba(0,0,0,.72);
@@ -372,7 +418,7 @@
     </div>
     <div class="adLabel">Advertisement</div>
 
-    <!-- VERIFY (UPDATED: SUPER CLEAR BUTTON) -->
+    <!-- VERIFY -->
     <section id="verifyWrap" class="glass verify">
       <h2>Unlock Preview Photos</h2>
       <p>
@@ -391,7 +437,7 @@
       </div>
 
       <div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.65)">
-        After clicking, the collections will appear below.
+        After clicking, the collections will appear below with a smooth reveal.
       </div>
 
       <div class="warn">By continuing you confirm you are 18+ and agree to view adult-themed previews.</div>
@@ -495,7 +541,8 @@
       "https://i.imgur.com/YYhdj9d.jpeg"
     ];
 
-    function renderCollection(containerId, arr){
+    // ✅ Reveal animation: curtain opens top->bottom, stagger per image
+    function renderCollection(containerId, arr, startDelayMs){
       const el = document.getElementById(containerId);
       if(!el || el.dataset.built === "1") return;
       el.dataset.built = "1";
@@ -503,6 +550,7 @@
       arr.forEach((src, idx) => {
         const box = document.createElement("div");
         box.className = "imgBox";
+        box.style.setProperty("--d", (startDelayMs + (idx * 180)) + "ms"); // stagger
 
         const img = document.createElement("img");
         img.src = src;
@@ -511,11 +559,16 @@
 
         const overlay = document.createElement("div");
         overlay.className = "overlay";
-        overlay.innerHTML = `<span>Preview ${idx+1}</span><span>🔒 Premium</span>`;
+        overlay.innerHTML = `<span>Preview ${idx+1} • Swipe down</span><span>🔒 Premium</span>`;
 
         box.appendChild(img);
         box.appendChild(overlay);
         el.appendChild(box);
+
+        // reveal after short “pause” so it feels like curtain opening
+        requestAnimationFrame(() => {
+          setTimeout(() => box.classList.add("reveal"), 220);
+        });
       });
     }
 
@@ -526,12 +579,14 @@
     verifyBtn.addEventListener("click", () => {
       privateArea.style.display = "block";
 
-      renderCollection("collection1", collection1);
-      renderCollection("collection2", collection2);
-      renderCollection("collection3", collection3);
+      // build in order + delays so it feels sequential down the page
+      renderCollection("collection1", collection1, 0);
+      renderCollection("collection2", collection2, 700);
+      renderCollection("collection3", collection3, 1400);
 
       document.getElementById("verifyWrap").style.display = "none";
-      setTimeout(() => privateArea.scrollIntoView({behavior:"smooth", block:"start"}), 120);
+
+      setTimeout(() => privateArea.scrollIntoView({behavior:"smooth", block:"start"}), 180);
     });
 
     // Exit modal
